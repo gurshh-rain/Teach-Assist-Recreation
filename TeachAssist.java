@@ -1,9 +1,21 @@
+
 import java.io.BufferedWriter;
 import java.io.BufferedReader;
 import java.io.FileWriter;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.Scanner;
+class Person {
+	String name;
+	int age;
+	public Person(String name, int age) {
+		this.name = name;
+		this.age = age;
+	}
+	public String getInfo() {
+		return "Name: " + name + " | Age: " + age;
+	}
+}
 class Stack {
 	int top;
 	Student[] students;
@@ -43,17 +55,17 @@ class Stack {
 	public void addGradeStudent(Scanner input, String testName,
 	    double kweight, double tweight, double cweight, double aweight) {
 	    for (int i = 0; i <= top; i++) {
-	        System.out.println("Entering scores for: " + students[i].name);
-	        System.out.print("  Knowledge score (enter -1 to skip student): ");
+	        System.out.println("Entering grades for: " + students[i].name);
+	        System.out.print("  Knowledge grade (enter -1 to skip student): ");
 	        double kscore = input.nextDouble();
 	        if(kscore == -1) {
 	        	continue;
 	        }
-	        System.out.print("  Thinking score: ");
+	        System.out.print("  Thinking grade: ");
 	        double tscore = input.nextDouble();
-	        System.out.print("  Communication score: ");
+	        System.out.print("  Communication grade: ");
 	        double cscore = input.nextDouble();
-	        System.out.print("  Application score: ");
+	        System.out.print("  Application grade: ");
 	        double ascore = input.nextDouble();
 	        Grade grade = new Grade(testName, kscore, tscore, cscore, ascore,
 	                                kweight, tweight, cweight, aweight);
@@ -62,11 +74,44 @@ class Stack {
 	    }
 	}
 	public String toString() {
-		String result = "";
-		for(int i = 0; i <= top; i++){
-			result += students[i].toString() + "\n";
+		return toStringRecursive(0);
+	}
+	private String toStringRecursive(int index) {
+		if (index > top) return "";
+		return students[index].toString() + "\n" + toStringRecursive(index + 1);
+	}
+	public void sortByName() {
+		for (int i = 0; i <= top; i++) {
+			for (int j = 0; j < top - i; j++) {
+				if (students[j].getName().compareToIgnoreCase(students[j+1].getName()) > 0) {
+					Student temp = students[j];
+					students[j] = students[j+1];
+					students[j+1] = temp;
+				}
+			}
 		}
-		return result;
+	}
+	public void sortByGrade() {
+		for (int i = 0; i <= top; i++) {
+			for (int j = 0; j < top - i; j++) {
+				if (students[j].grades.calculateOverall() < students[j+1].grades.calculateOverall()) {
+					Student temp = students[j];
+					students[j] = students[j+1];
+					students[j+1] = temp;
+				}
+			}
+		}
+	}
+	public void sortByAge() {
+		for (int i = 0; i <= top; i++) {
+			for (int j = 0; j < top - i; j++) {
+				if (students[j].age > students[j+1].age) {
+					Student temp = students[j];
+					students[j] = students[j+1];
+					students[j+1] = temp;
+				}
+			}
+		}
 	}
 }
 class Course {
@@ -93,6 +138,25 @@ class Course {
 		}
 		System.out.println(students.toString());
 	}
+	public void displayGradeSummary() {
+		if (students.size() <= 0) return;
+		double[][] summary = new double[students.size()][4];
+		for (int i = 0; i <= students.top; i++) {
+			LinkedList.Node current = students.students[i].grades.head;
+			int count = 0;
+			while (current != null) {
+				summary[i][0] += current.grade.kscore;
+				summary[i][1] += current.grade.tscore;
+				summary[i][2] += current.grade.cscore;
+				summary[i][3] += current.grade.ascore;
+				count++;
+				current = current.next;
+			}
+			if (count > 0) {
+				for (int j = 0; j < 4; j++) summary[i][j] /= count;
+			}
+		}
+	}
 	public void removeStudent(String studentName, int age) {
 	    students.removeByName(studentName, age);
 	}
@@ -106,6 +170,9 @@ class Course {
 	    }
 	    System.out.println("Student not found.");
 	}
+	public void sortByName() { students.sortByName(); }
+	public void sortByGrade() { students.sortByGrade(); }
+	public void sortByAge() { students.sortByAge(); }
 }
 class Grade {
 	String testName;
@@ -136,21 +203,15 @@ class LinkedList {
 		current.next = new Node(grade);
 		size++;
 	}
-	// Each test is weighted by its total strand weight relative to all tests combined.
-	// e.g. quiz1 weights sum = 20, quiz2 weights sum = 4, total = 24
-	//      quiz1 earned = (5*100 + 5*100 + 5*100 + 5*100) / 100 = 20
-	//      quiz2 earned = (1*0   + 1*0   + 1*0   + 1*0  ) / 100 = 0
-	//      overall = (20 + 0) / 24 * 100 = 83.33%
 	public double calculateOverall() {
 	    if (size == 0) return 0;
 	    Node current = head;
-	    double earnedSum = 0;     // sum of marks actually earned across all tests
-	    double totalWeightSum = 0; // sum of all test total weights (= total marks possible / 100)
+	    double earnedSum = 0;
+	    double totalWeightSum = 0;
 	    while (current != null) {
 	        Grade g = current.grade;
 	        double testTotalWeight = g.kweight + g.tweight + g.cweight + g.aweight;
 	        if (testTotalWeight > 0) {
-	            // marks earned on this test (out of testTotalWeight)
 	            double earned = (g.kweight * g.kscore + g.tweight * g.tscore
 	                           + g.cweight * g.cscore + g.aweight * g.ascore) / 100.0;
 	            earnedSum      += earned;
@@ -162,19 +223,18 @@ class LinkedList {
 	    return Math.min((earnedSum / totalWeightSum) * 100.0, 100.0);
 	}
 }
-class Student {
-	String name;
-	int age;
+class Student extends Person {
 	LinkedList grades;
 	public Student(String name, int age) {
-		this.name = name; this.age = age;
+		super(name, age);
 		grades = new LinkedList();
 	}
+	public String getName(){ return name; }
 	public LinkedList getGrades() { return grades; }
 	public String toString() {
 	    double overall = grades.calculateOverall();
-	    String result = "Name: " + name + " | Age: " + age
-	                  + " | Overall Grade: " + String.format("%.2f", overall) + "%\n";
+	    double rounded = Math.round(overall * 100.0) / 100.0;
+	    String result = getInfo() + " | Overall Grade: " + rounded + "%\n";
 	    if (grades.size == 0) {
 	        result += "  No grades yet.\n";
 	    } else {
@@ -185,12 +245,13 @@ class Student {
 	            double testScore = (totalWeight > 0)
 	                ? (g.kweight * g.kscore + g.tweight * g.tscore
 	                 + g.cweight * g.cscore + g.aweight * g.ascore) / totalWeight : 0;
+	            double roundedTest = Math.round(testScore * 100.0) / 100.0;
 	            result += "  [" + g.testName + "] "
 	                    + "K:" + g.kscore + "%[" + g.kweight + "] "
 	                    + "T:" + g.tscore + "%[" + g.tweight + "] "
 	                    + "C:" + g.cscore + "%[" + g.cweight + "] "
 	                    + "A:" + g.ascore + "%[" + g.aweight + "] "
-	                    + "=> " + String.format("%.2f", testScore) + "%\n";
+	                    + "=> " + roundedTest + "%\n";
 	            current = current.next;
 	        }
 	    }
@@ -337,8 +398,22 @@ public class TeachAssist {
 	        } else {
 	            System.out.println("Clear cancelled.");
 	        }
-	    } else {
-	        System.out.println("Feature not yet implemented.");
+	    } else if (option == 7) {
+	    	System.out.println("1. Sort by name");
+	    	System.out.println("2. Sort by grade");
+	    	System.out.println("3. Sort by age");
+	    	int sort_method = input.nextInt();
+	    	if (sort_method == 1) {
+	    		activeCourse.sortByName();
+	    		System.out.println("Sorted by name.");
+	    	} else if (sort_method == 2) {
+	    		activeCourse.sortByGrade();
+	    		System.out.println("Sorted by grade (highest first).");
+	    	} else if (sort_method == 3) {
+	    		activeCourse.sortByAge();
+	    		System.out.println("Sorted by age (youngest first).");
+	    	}
+	    	activeCourse.displayStudents();
 	    }
 	}
 	public static void main(String[] args) {
@@ -392,8 +467,10 @@ public class TeachAssist {
 	            System.out.println("4. Add test score");
 	            System.out.println("5. Save all courses to file");
 	            System.out.println("6. Clear saved file");
+	            System.out.println("7. Sort students");
 	            System.out.println("0. Go back to course list");
 	            activeCourse.displayStudents();
+	            activeCourse.displayGradeSummary();
 	            int option = input.nextInt();
 	            input.nextLine();
 	            if (option == 0) break;
@@ -402,3 +479,5 @@ public class TeachAssist {
 	    }
 	}
 }
+
+
