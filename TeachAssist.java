@@ -31,7 +31,7 @@ class Stack {
 		students[top] = student;
 	}
 	public void pop() {
-		if(top<0) {
+		if(top<0){
 			return;
 		}
 		top -= 1;
@@ -117,6 +117,12 @@ class Stack {
 class Course {
 	String courseName;
 	Stack students = null;
+	String[] testNames = new String[100];
+	double[] testKWeights = new double[100];
+	double[] testTWeights = new double[100];
+	double[] testCWeights = new double[100];
+	double[] testAWeights = new double[100];
+	int testCount = 0;
 	public Course(String courseName) {
 		this.courseName = courseName;
 		this.students = new Stack(30);
@@ -124,12 +130,54 @@ class Course {
 	public String getName() {
 		return courseName;
 	}
-	public void addStudent(String studentName, int age){
-	    students.add(new Student(studentName, age));
+	public void addStudent(String studentName, int age, Scanner input){
+	    Student s = new Student(studentName, age);
+	    students.add(s);
+	    if (testCount > 0) {
+	        System.out.println("Existing tests are on record. Enter scores for any of them? (y/n): ");
+	        String choice = input.nextLine().trim().toLowerCase();
+	        if (choice.equals("y")) {
+	            for (int t = 0; t < testCount; t++) {
+	                System.out.println("Enter scores for [" + testNames[t] + "]? (y/n): ");
+	                String enter = input.nextLine().trim().toLowerCase();
+	                if (!enter.equals("y")) continue;
+	                System.out.print("  Knowledge grade: ");
+	                double kscore = input.nextDouble();
+	                System.out.print("  Thinking grade: ");
+	                double tscore = input.nextDouble();
+	                System.out.print("  Communication grade: ");
+	                double cscore = input.nextDouble();
+	                System.out.print("  Application grade: ");
+	                double ascore = input.nextDouble();
+	                input.nextLine();
+	                s.grades.addGrade(new Grade(testNames[t], kscore, tscore, cscore, ascore,
+	                        testKWeights[t], testTWeights[t], testCWeights[t], testAWeights[t]));
+	                System.out.println("Grade added.");
+	            }
+	        }
+	    }
 	}
 	public void addGrades(Scanner input, String testName,
 	        double kweight, double tweight, double cweight, double aweight) {
+	    // Record the test so future students can use it
+	    testNames[testCount] = testName;
+	    testKWeights[testCount] = kweight;
+	    testTWeights[testCount] = tweight;
+	    testCWeights[testCount] = cweight;
+	    testAWeights[testCount] = aweight;
+	    testCount++;
 	    students.addGradeStudent(input, testName, kweight, tweight, cweight, aweight);
+	}
+	public void registerTest(String testName, double kw, double tw, double cw, double aw) {
+	    for (int i = 0; i < testCount; i++) {
+	        if (testNames[i].equals(testName)) return;
+	    }
+	    testNames[testCount] = testName;
+	    testKWeights[testCount] = kw;
+	    testTWeights[testCount] = tw;
+	    testCWeights[testCount] = cw;
+	    testAWeights[testCount] = aw;
+	    testCount++;
 	}
 	public void displayStudents(){
 		if(students.size() <= 0){
@@ -156,6 +204,15 @@ class Course {
 				for (int j = 0; j < 4; j++) summary[i][j] /= count;
 			}
 		}
+		System.out.println("  --- Grade Summary (category averages) ---");
+		String[] labels = {"K", "T", "C", "A"};
+		for (int i = 0; i <= students.top; i++) {
+			System.out.print("  " + students.students[i].name + ": ");
+			for (int j = 0; j < 4; j++) {
+				System.out.print(labels[j] + "=" + (int) summary[i][j] + "% ");
+			}
+			System.out.println();
+		}
 	}
 	public void removeStudent(String studentName, int age) {
 	    students.removeByName(studentName, age);
@@ -170,9 +227,9 @@ class Course {
 	    }
 	    System.out.println("Student not found.");
 	}
-	public void sortByName() { students.sortByName(); }
+	public void sortByName()  { students.sortByName(); }
 	public void sortByGrade() { students.sortByGrade(); }
-	public void sortByAge() { students.sortByAge(); }
+	public void sortByAge()   { students.sortByAge(); }
 }
 class Grade {
 	String testName;
@@ -205,22 +262,36 @@ class LinkedList {
 	}
 	public double calculateOverall() {
 	    if (size == 0) return 0;
+	    double kTotal = 0, tTotal = 0, cTotal = 0, aTotal = 0;
+	    double kw = 0, tw = 0, cw = 0, aw = 0;
+	    int count = 0;
 	    Node current = head;
-	    double earnedSum = 0;
-	    double totalWeightSum = 0;
 	    while (current != null) {
 	        Grade g = current.grade;
-	        double testTotalWeight = g.kweight + g.tweight + g.cweight + g.aweight;
-	        if (testTotalWeight > 0) {
-	            double earned = (g.kweight * g.kscore + g.tweight * g.tscore
-	                           + g.cweight * g.cscore + g.aweight * g.ascore) / 100.0;
-	            earnedSum      += earned;
-	            totalWeightSum += testTotalWeight;
-	        }
+	        kTotal += g.kscore;
+	        tTotal += g.tscore;
+	        cTotal += g.cscore;
+	        aTotal += g.ascore;
+	        kw += g.kweight;
+	        tw += g.tweight;
+	        cw += g.cweight;
+	        aw += g.aweight;
+	        count++;
 	        current = current.next;
 	    }
-	    if (totalWeightSum == 0) return 0;
-	    return Math.min((earnedSum / totalWeightSum) * 100.0, 100.0);
+	    double kAvg = kTotal / count;
+	    double tAvg = tTotal / count;
+	    double cAvg = cTotal / count;
+	    double aAvg = aTotal / count;
+	   
+	    double kwAvg = kw / count;
+	    double twAvg = tw / count;
+	    double cwAvg = cw / count;
+	    double awAvg = aw / count;
+	    double totalWeight = kwAvg + twAvg + cwAvg + awAvg;
+	    if (totalWeight == 0) return 0;
+	    double overall = (kwAvg * kAvg + twAvg * tAvg + cwAvg * cAvg + awAvg * aAvg) / totalWeight;
+	    return Math.min(overall, 100.0);
 	}
 }
 class Student extends Person {
@@ -306,7 +377,10 @@ public class TeachAssist {
 		try {
 			BufferedReader reader = new BufferedReader(new FileReader(DATA_FILE));
 			String firstLine = reader.readLine();
-			if (firstLine == null || firstLine.trim().isEmpty()) {
+			while (firstLine != null && firstLine.trim().isEmpty()) {
+				firstLine = reader.readLine();
+			}
+			if (firstLine == null) {
 				reader.close();
 				System.out.println("File is empty, nothing to load.");
 				return new Course[0];
@@ -332,6 +406,12 @@ public class TeachAssist {
 						Double.parseDouble(parts[8]), Double.parseDouble(parts[9])
 					);
 					currentStudent.grades.addGrade(g);
+					// Restore test registry from file data
+					if (currentCourse != null) {
+						currentCourse.registerTest(parts[1],
+							Double.parseDouble(parts[6]), Double.parseDouble(parts[7]),
+							Double.parseDouble(parts[8]), Double.parseDouble(parts[9]));
+					}
 				}
 			} while ((line = reader.readLine()) != null);
 			reader.close();
@@ -355,7 +435,8 @@ public class TeachAssist {
 	        String name = input.nextLine();
 	        System.out.print("Enter student age: ");
 	        int age = input.nextInt();
-	        activeCourse.addStudent(name, age);
+	        input.nextLine();
+	        activeCourse.addStudent(name, age, input);
 	        System.out.println("Student added successfully.");
 	        activeCourse.displayStudents();
 	    } else if (option == 2) {
@@ -479,5 +560,6 @@ public class TeachAssist {
 	    }
 	}
 }
+
 
 
